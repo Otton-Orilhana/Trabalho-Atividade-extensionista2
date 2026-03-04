@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Meu Perfil — EduFin. Visualize seu progresso, edite seu perfil e sincronize resultados.">
+  <title>Perfil - EduFin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- redireciona para login se não houver usuário autenticado -->
+  <script>
+    (function(){
+      try {
+        const current = JSON.parse(localStorage.getItem('currentUser')||'null');
+        if (!current) {
+          // aguarda carregamento mínimo antes de redirecionar para evitar navegação indesejada em testes
+          setTimeout(()=> window.location.href = 'login.html', 50);
+        }
+      } catch (e) {
+        console.warn('Erro ao verificar currentUser', e);
+      }
+    })();
+  </script>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary" role="navigation" aria-label="Navegação principal">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">EduFin</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar navegação">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html">Início</a></li>
+          <li class="nav-item"><a class="nav-link" href="lesson.html">Conteúdos</a></li>
+          <li class="nav-item"><a class="nav-link active" aria-current="page" href="profile.html">Meu Perfil</a></li>
+          <li class="nav-item"><a class="nav-link" href="teacher.html">Professor</a></li>
+        </ul>
+        <span id="nav-user" class="text-white ms-3" aria-live="polite"></span>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+    <h3>Meu Perfil</h3>
+    <p id="user-name" class="mb-2">Usuário: Visitante</p>
+
+    <div class="card p-3 mb-3" aria-labelledby="thermometer-label">
+      <strong id="thermometer-label">Termômetro de aprendizado</strong>
+      <div id="thermometer" class="mt-2">Frio</div>
+      <div id="profile-stats" class="mt-3"></div>
+      <div id="profile-level" class="mt-2" aria-live="polite"></div>
+    </div>
+
+    <div class="card p-3 mb-3">
+      <h5>Editar perfil</h5>
+      <form id="edit-profile-form" novalidate>
+        <div class="mb-3">
+          <label for="edit-name" class="form-label">Nome</label>
+          <input id="edit-name" class="form-control" required aria-required="true">
+        </div>
+
+        <h6>Perguntas rápidas (recalcula nível)</h6>
+        <div class="mb-2">
+          <label for="edit-q-invest" class="form-label">Você já investe?</label>
+          <select id="edit-q-invest" class="form-select" aria-label="Você já investe?">
+            <option value="no">Não</option>
+            <option value="yes">Sim</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label for="edit-q-sheet" class="form-label">Usa planilha financeira?</label>
+          <select id="edit-q-sheet" class="form-select" aria-label="Usa planilha financeira?">
+            <option value="no">Não</option>
+            <option value="yes">Sim</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label for="edit-q-time" class="form-label">Tempo de estudo por semana</label>
+          <select id="edit-q-time" class="form-select" aria-label="Tempo de estudo por semana">
+            <option value="0">Nenhum</option>
+            <option value="1">&lt;1h</option>
+            <option value="2">&gt;1h</option>
+          </select>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" type="submit">Salvar alterações</button>
+          <button id="sync-local" type="button" class="btn btn-outline-secondary">Sincronizar resultados</button>
+        </div>
+      </form>
+      <div id="edit-msg" class="mt-2" aria-live="polite"></div>
+    </div>
+
+    <div class="mt-3">
+      <button id="clear-data" class="btn btn-outline-danger">Limpar dados de teste</button>
+    </div>
+  </main>
+
+  <noscript>
+    <div class="alert alert-warning text-center m-3">Este site funciona melhor com JavaScript habilitado.</div>
+  </noscript>
+
+  <!-- scripts: auth.js primeiro, app.js em seguida -->
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- preencher UI com dados do usuário e ligar botões -->
+  <script>
+    (function(){
+      try {
+        const cur = JSON.parse(localStorage.getItem('currentUser')||'null');
+        const navEl = document.getElementById('nav-user');
+        if (navEl) {
+          if (cur && cur.name) navEl.innerHTML = `Olá, ${cur.name} • <a href="#" onclick="logout()" class="text-white">Sair</a>`;
+          else navEl.innerHTML = `<a href="login.html" class="text-white">Entrar</a>`;
+        }
+
+        if (cur && cur.id) {
+          document.getElementById('user-name').textContent = `Usuário: ${cur.name}`;
+          // preencher dados do usuário salvo localmente (fallback)
+          const users = JSON.parse(localStorage.getItem('users')||'[]');
+          const u = users.find(x => String(x.id) === String(cur.id));
+          if (u) {
+            document.getElementById('profile-level').innerHTML = `<strong>Nível:</strong> ${u.level || ''}`;
+            document.getElementById('edit-name').value = u.name || '';
+            document.getElementById('edit-q-invest').value = u.answers?.q_invest || 'no';
+            document.getElementById('edit-q-sheet').value = u.answers?.q_sheet || 'no';
+            document.getElementById('edit-q-time').value = u.answers?.q_time || '0';
+          } else {
+            // se não houver usuário local, preencher apenas o nome
+            document.getElementById('edit-name').value = cur.name || '';
+          }
+        }
+
+        // bind do botão sincronizar local -> servidor
+        const syncBtn = document.getElementById('sync-local');
+        if (syncBtn) {
+          syncBtn.addEventListener('click', async () => {
+            try {
+              if (typeof syncLocalResultsToServer === 'function') {
+                await syncLocalResultsToServer();
+                const msg = document.getElementById('edit-msg');
+                if (msg) { msg.textContent = 'Sincronização concluída.'; msg.className = 'text-success mt-2'; }
+              } else {
+                alert('Função de sincronização não disponível.');
+              }
+            } catch (e) {
+              console.warn('Erro ao sincronizar', e);
+              const msg = document.getElementById('edit-msg');
+              if (msg) { msg.textContent = 'Falha na sincronização.'; msg.className = 'text-danger mt-2'; }
+            }
+          });
+        }
+
+        // bind do botão limpar dados (já presente no app.js, mas reforço aqui)
+        const clearBtn = document.getElementById('clear-data');
+        if (clearBtn) {
+          clearBtn.addEventListener('click', ()=> {
+            if (confirm('Limpar todos os dados de teste (users, quizResults, currentUser)?')) {
+              localStorage.removeItem('quizResults');
+              localStorage.removeItem('users');
+              localStorage.removeItem('currentUser');
+              location.href = 'index.html';
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Erro ao inicializar perfil', e);
+      }
+    })();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
